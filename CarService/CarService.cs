@@ -1,13 +1,10 @@
-using System.Net.Sockets;
-using InTheHand.Net;
-using InTheHand.Net.Sockets;
-
 namespace CarController.Services;
 
-public class CarService : IDisposable
+public class CarService
 {
-    private readonly BluetoothClient _client;
-    private readonly NetworkStream? _stream;
+    private const int TickDelayMilliseconds = 100;
+    
+    private readonly IBluetoothClient _client;
 
     private Direction _direction = Direction.Stopped;
     
@@ -17,68 +14,171 @@ public class CarService : IDisposable
     public event Action? OnLeftIrSensorDetected;
     public event Action? OnRightIrSensorDetected;
     private bool _foundAck;
-    private readonly object _processIncomingStreamLock = new();
+    private SemaphoreSlim _semaphoreSlim = new(1, 1);
     
-    public CarService(string deviceName)
+    public CarService(IBluetoothClient client)
     {
-        _client = new BluetoothClient();
+        _client = client;
+    }
 
-        var devices = _client.DiscoverDevices();
-
-        var device = devices.FirstOrDefault(x => x.DeviceName == deviceName);
-        if (device is null)
-        {
-            throw new BluetoothDeviceNotFoundException("No devices found.");
-        }
-
-        var ep = new BluetoothEndPoint(device.DeviceAddress, InTheHand.Net.Bluetooth.BluetoothService.SerialPort);
-        _client.Connect(ep);
-
-        if (!_client.Connected)
-        {
-            throw new BluetoothDeviceFailedToConnectException("Failed to connect.");
-        }
+    public async Task Connect()
+    {
+        if (_client.Connected) return;
         
-        _stream = _client.GetStream();
+        await _client.Connect();
         
         Console.WriteLine("Waiting for connected message from device.");
-        SpinWait.SpinUntil(() =>
-        {
-            try
-            {
-                return _stream.DataAvailable;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-                return false;
-            }
-        }, TimeSpan.FromSeconds(1));
+        SpinWait.SpinUntil(() => _client.DataAvailable, TimeSpan.FromSeconds(1));
         
         var buffer = new byte[256];
-        var count = _stream.Read(buffer, 0, buffer.Length);
-        var line = Convert.ToString(buffer[..count]);
+        var count = _client.Read(ref buffer, 0, buffer.Length);
+        var line = Convert.ToBase64String(buffer[..count]);
         
         Console.WriteLine(line);
 
-        Task.Run(Tick);
+        _ = Task.Run(Tick);
     }
 
+    public void Disconnect()
+    {
+        if (!_client.Connected) return;
+     
+        _client.Disconnect();
+    }
+    
     public async Task ChangeSpeed(byte newSpeed)
     {
-        _stream?.Write([5, newSpeed]);
-        await Task.Run(SpinWaitForAck);
+        await ObtainLock(async () =>
+        {
+            _client.Write([5, newSpeed]);
+            await Task.Run(SpinWaitForAck);
+        });
+    }
+
+    public async Task TurnLeft()
+    {
+        await ObtainLock(async () =>
+        {
+            if (_direction is Direction.Left) return;
+            
+            _client.Write([3]);
+            await Task.Run(SpinWaitForAck);
+            
+            _direction = Direction.Left;
+        });
+    }
+    
+    public async Task TurnRight()
+    {
+        await ObtainLock(async () =>
+        {
+            if (_direction is Direction.Right) return;
+            
+            _client.Write([4]);
+            await Task.Run(SpinWaitForAck);
+            
+            _direction = Direction.Right;
+        });
+    }
+    
+    public async Task MoveBackwards()
+    {
+        await ObtainLock(async () =>
+        {
+            if (_direction is Direction.Backward) return;
+        
+            _client.Write([2]);
+            await Task.Run(SpinWaitForAck);
+        
+            _direction = Direction.Backward;
+        });
+    }
+    
+    public async Task MoveForwards()
+    {
+        await ObtainLock(async () =>
+        {
+            if (_direction is Direction.Forward) return;
+        
+            _client.Write([1]);
+            await Task.Run(SpinWaitForAck);
+        
+            _direction = Direction.Forward;
+        });
+    }
+
+    public async Task StopMoving()
+    {
+        await ObtainLock(async () =>
+        {
+            if (_direction is Direction.Stopped) return;
+        
+            _client.Write([0]);
+            await Task.Run(SpinWaitForAck);
+        
+            _direction = Direction.Stopped;
+        });
+    }
+    
+    private async Task Tick()
+    {
+        while (_client.Connected)
+        {
+            await ObtainLock(() =>
+            {
+                ProcessIncomingStream();
+                return Task.CompletedTask;
+            });
+            
+            await Task.Delay(TickDelayMilliseconds);
+        }
+    }
+
+    private void SpinWaitForAck()
+    {
+        SpinWait.SpinUntil(() => _client.DataAvailable, TimeSpan.FromSeconds(10));
+
+        if (_client.DataAvailable)
+        {
+            ProcessIncomingStream();
+
+            if (!_foundAck)
+            {
+                throw new CarServiceException("The device sent data but the command was not acknowledged.");
+            }
+        }
+        else
+        {
+            throw new CarServiceException("After 10 seconds an acknowledgement was not sent by the controller.");
+        }
+    }
+    
+    private async Task ObtainLock(Func<Task> func)
+    {
+        try
+        {
+            if (await _semaphoreSlim.WaitAsync(TimeSpan.FromSeconds(10)))
+            {
+                await func();
+            }
+            else
+            {
+                throw new CarServiceException("Unable to obtain lock within the time of 10 seconds.");
+            }
+        }
+        finally
+        {
+            _semaphoreSlim.Release();
+        }
     }
     
     private void ProcessIncomingStream()
     {
-        if (_stream is null) return;
-        
         var buffer = new byte[256];
         
-        if (_stream?.DataAvailable ?? false)
+        if (_client.DataAvailable)
         {
-            var n = _stream?.Read(buffer, 0, buffer.Length);
+            var n = _client.Read(ref buffer, 0, buffer.Length);
 
             for (var i = 0; i < n; i++)
             {
@@ -98,102 +198,6 @@ public class CarService : IDisposable
         }
     }
 
-    private async Task Tick()
-    {
-        while (_client.Connected)
-        {
-            lock (_processIncomingStreamLock)
-            {
-                ProcessIncomingStream();
-            }
-            
-            await Task.Delay(100);
-        }
-    }
-
-    public async Task TurnLeft()
-    {
-        if (_direction is Direction.Left) return;
-        
-        Console.WriteLine("Turn left.");
-        _stream?.Write([3]);
-        await Task.Run(SpinWaitForAck);
-        
-        _direction = Direction.Left;
-    }
-    
-    public async Task TurnRight()
-    {
-        if (_direction is Direction.Right) return;
-        
-        _stream?.Write([4]);
-        await Task.Run(SpinWaitForAck);
-        
-        _direction = Direction.Right;
-    }
-    
-    public async Task MoveBackwards()
-    {
-        if (_direction is Direction.Backward) return;
-        
-        _stream?.Write([2]);
-        await Task.Run(SpinWaitForAck);
-        
-        _direction = Direction.Backward;
-    }
-    
-    public async Task MoveForwards()
-    {
-        if (_direction is Direction.Forward) return;
-        
-        _stream?.Write([1]);
-        await Task.Run(SpinWaitForAck);
-        
-        _direction = Direction.Forward;
-    }
-
-    public async Task StopMoving()
-    {
-        if (_direction is Direction.Stopped) return;
-        
-        _stream?.Write([0]);
-        await Task.Run(SpinWaitForAck);
-        
-        _direction = Direction.Stopped;
-    }
-
-    public void Dispose()
-    {
-        _client.Dispose();
-    }
-
-    private void SpinWaitForAck()
-    {
-        if (_stream is null)
-        {
-            throw new CarServiceException("Cannot wait for an acknowledgement because the bluetooth stream is null.");
-        }
-
-        lock (_processIncomingStreamLock)
-        {
-            SpinWait.SpinUntil(() => _stream.DataAvailable, TimeSpan.FromSeconds(10));
-
-            if (_stream.DataAvailable)
-            {
-                ProcessIncomingStream();
-
-                if (!_foundAck)
-                {
-                    throw new CarServiceException("The device sent data but the command was not acknowledged.");
-                }
-            }
-            else
-            {
-                throw new CarServiceException("After 10 seconds an acknowledgement was not sent by the controller.");
-            }
-        }
-    }
-
     private enum Direction
     {
         Stopped,
@@ -203,7 +207,3 @@ public class CarService : IDisposable
         Right
     }
 }
-
-public class BluetoothDeviceNotFoundException(string message) : Exception(message);
-public class BluetoothDeviceFailedToConnectException(string message) : Exception(message);
-public class CarServiceException(string message) : Exception(message);

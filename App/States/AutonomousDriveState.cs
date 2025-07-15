@@ -6,14 +6,14 @@ namespace CarController.Runnables.States;
 
 public class AutonomousDriveState : State
 {
-    private readonly PS4Joystick _Joystick;
+    private readonly PS4Joystick _joystick;
     private readonly CarService _carService;
     private bool _isLeftIrSensorDetected;
     private bool _isRightIrSensorDetected;
     
     public AutonomousDriveState(IMutableState mutableState, PS4Joystick joystick, CarService carService) : base(mutableState)
     {
-        _Joystick = joystick;
+        _joystick = joystick;
         _carService = carService;
     }
     
@@ -42,11 +42,11 @@ public class AutonomousDriveState : State
 
     public override async Task OnUpdate()
     {
-        _Joystick.Update();
+        _joystick.Update();
         
-        if (_Joystick.OnButtonDown(PS4Buttons.X))
+        if (_joystick.OnButtonDown(PS4Buttons.X))
         {
-            ChangeState(new IdleState(_mutableState, _Joystick, _carService));
+            await ChangeState(new IdleState(MutableState, _joystick, _carService));
             return;
         }
 

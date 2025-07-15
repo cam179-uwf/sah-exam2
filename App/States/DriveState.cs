@@ -28,13 +28,13 @@ public class DriveState : State
         
         if (_joystick.OnButtonDown(PS4Buttons.X))
         {
-            ChangeState(new AutonomousDriveState(_mutableState, _joystick, _carService));
+            await ChangeState(new AutonomousDriveState(MutableState, _joystick, _carService));
             return;
         }
 
         if (!_joystick.IsButtonPressed(PS4Buttons.R2))
         {
-            ChangeState(new IdleState(_mutableState, _joystick, _carService));
+            await ChangeState(new IdleState(MutableState, _joystick, _carService));
             return;
         }
         

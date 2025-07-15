@@ -2,21 +2,21 @@ namespace CarController.States;
 
 public abstract class State
 {
-    protected readonly IMutableState _mutableState;
+    protected readonly IMutableState MutableState;
     
     protected State(IMutableState mutableState)
     {
-        _mutableState = mutableState;
+        MutableState = mutableState;
     }
 
-    protected void ChangeState(State state)
+    protected async Task ChangeState(State state)
     {
         // exit the previous state
-        _mutableState.State.OnExit();
+        await MutableState.State.OnExit();
         
         // change to and enter the new state
-        _mutableState.ChangeState(state);
-        _mutableState.State.OnEnter();
+        MutableState.ChangeState(state);
+        await MutableState.State.OnEnter();
     }
     
     public abstract Task OnEnter();

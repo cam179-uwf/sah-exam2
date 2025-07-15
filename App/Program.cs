@@ -9,7 +9,8 @@ Console.WriteLine("Connecting...");
 
 try
 {
-    carService = new CarService("BoxCarESP32");
+    carService = new CarService(new InTheHandBluetoothClient("BoxCarESP32"));
+    await carService.Connect();
     Console.WriteLine("Connected to BoxCarESP32.");
 }
 catch (Exception e)
@@ -33,3 +34,8 @@ catch (Exception e)
 
 var stateMachine = new StateMachine();
 await stateMachine.Start(new IdleState(stateMachine, joystick, carService));
+
+if (stateMachine.UpdaterTask is not null)
+{
+    await stateMachine.UpdaterTask;
+}

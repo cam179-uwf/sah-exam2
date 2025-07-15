@@ -4,29 +4,39 @@ public class StateMachine : IDisposable, IMutableState
 {
     private CancellationTokenSource? _cancellationTokenSource;
     private bool _isStarted;
+    public Task? UpdaterTask { get; private set; }
 
     public State State { get; private set; } = null!;
     
-    public Task Start(State root)
+    public async Task Start(State root)
     {
-        if (_isStarted) return Task.CompletedTask;
+        if (_isStarted) return;
         _isStarted = true;
         
         State = root;
         
-        State.OnEnter();
+        await State.OnEnter();
 
         _cancellationTokenSource = new CancellationTokenSource();
-        return Task.Run(Updater);
+        UpdaterTask = Task.Run(Updater);
     }
 
-    public void Stop()
+    public async Task Stop()
     {
         if (!_isStarted) return;
         _isStarted = false;
+
+        if (_cancellationTokenSource is not null)
+        {
+            await _cancellationTokenSource.CancelAsync();
+        }
         
-        _cancellationTokenSource?.Cancel();
-        State.OnExit();
+        await State.OnExit();
+
+        if (UpdaterTask is not null)
+        {
+            await UpdaterTask;
+        }
     }
 
     private async Task Updater()
