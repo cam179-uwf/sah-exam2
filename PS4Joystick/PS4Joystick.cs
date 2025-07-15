@@ -1,0 +1,184 @@
+using System.Timers;
+using SharpDX.DirectInput;
+using Timer = System.Timers.Timer;
+
+namespace CarController.Services.PS4;
+
+public class PS4Joystick
+{
+    private readonly Joystick _joystick;
+    private readonly Timer _ticker;
+
+    private GamepadDevice GamepadDevice { get; set; }
+    public float LeftJoystickDeadZone { get; private set; } = 0.15F;
+    public float RightJoystickDeadZone { get; private set; } = 0.15F;
+    public float MoveX { get; private set; }
+    public float MoveY { get; private set; }
+    public float RotationX { get; private set; }
+    public float RotationY { get; private set; }
+    public float LeftPaddle { get; private set; }
+    public float RightPaddle { get; private set; }
+
+    private readonly Dictionary<PS4Buttons, bool> _buttonStates = [];
+
+    public PS4Joystick()
+    {
+        foreach (var value in Enum.GetValues(typeof(PS4Buttons)))
+        {
+            _buttonStates.Add((PS4Buttons)value, false);
+        }
+        
+        GamepadDevice = FindAvailableJoysticks().FirstOrDefault() 
+                        ?? throw new PS4JoystickException("No available controllers found.");
+
+        var directInput = new DirectInput();
+        _joystick = new Joystick(directInput, GamepadDevice.Guid);
+
+        _joystick.Properties.BufferSize = 128;
+        _joystick.Acquire();
+
+        _ticker = new Timer();
+        _ticker.Interval = 100;
+        _ticker.Elapsed += Tick;
+        _ticker.AutoReset = true;
+        _ticker.Start();
+    }
+
+    ~PS4Joystick()
+    {
+        _ticker.Dispose();
+    }
+    
+    private static IEnumerable<GamepadDevice> FindAvailableJoysticks()
+    {
+        return new DirectInput()
+            .GetDevices(DeviceClass.GameControl, DeviceEnumerationFlags.AttachedOnly)
+            .Select(di => new GamepadDevice { Guid = di.InstanceGuid, Name = di.InstanceName })
+            .AsEnumerable();
+    }
+
+    /// <summary>
+    /// Change the tick speed of the joystick polling.
+    /// </summary>
+    /// <param name="milliseconds">Tick speed in milliseconds.</param>
+    public void SetTick(int milliseconds)
+    {
+        _ticker.Stop();
+        _ticker.Interval = milliseconds;
+        _ticker.Start();
+    }
+
+    public bool IsButtonPressed(PS4Buttons ps4Button) => _buttonStates[ps4Button];
+
+    private void Tick(object? sender, ElapsedEventArgs e)
+    {
+        _joystick.Poll();
+        var bufferedData = _joystick.GetBufferedData();
+        
+        foreach (var state in bufferedData)
+        {
+            switch (state.Offset)
+            {
+                case JoystickOffset.X:
+                    // 0.00003052F == 1 / 2^15
+                    var moveX = state.Value * 0.00003052F - 1;
+                    MoveX = Math.Clamp(Math.Abs(moveX) > LeftJoystickDeadZone ? moveX : 0, -1, 1);
+                    break;
+                case JoystickOffset.Y:
+                    var moveY = -(state.Value * 0.00003052F - 1);
+                    MoveY = Math.Clamp(Math.Abs(moveY) > LeftJoystickDeadZone ? moveY : 0, -1, 1);
+                    break;
+                case JoystickOffset.Z:
+                    var rotationX = state.Value * 0.00003052F - 1;
+                    RotationX = Math.Clamp(Math.Abs(rotationX) > RightJoystickDeadZone ? rotationX : 0, -1, 1);
+                    break;
+                case JoystickOffset.RotationZ:
+                    var rotationY = -(state.Value * 0.00003052F - 1);
+                    RotationY = Math.Clamp(Math.Abs(rotationY) > RightJoystickDeadZone ? rotationY : 0, -1, 1);
+                    break;
+                case JoystickOffset.RotationX:
+                    LeftPaddle = Math.Clamp(state.Value * 0.00003052F * 0.5F, 0, 1);
+                    break;
+                case JoystickOffset.RotationY:
+                    RightPaddle = Math.Clamp(state.Value * 0.00003052F * 0.5F, 0, 1);
+                    break;
+                case JoystickOffset.Buttons0:
+                    _buttonStates[PS4Buttons.Square] = state.Value > 0;
+                    break;
+                case JoystickOffset.Buttons3:
+                    _buttonStates[PS4Buttons.Triangle] = state.Value > 0;
+                    break;
+                case JoystickOffset.Buttons2:
+                    _buttonStates[PS4Buttons.Circle] = state.Value > 0;
+                    break;
+                case JoystickOffset.Buttons1:
+                    _buttonStates[PS4Buttons.X] = state.Value > 0;
+                    break;
+                case JoystickOffset.Buttons5:
+                    _buttonStates[PS4Buttons.R1] = state.Value > 0;
+                    break;
+                case JoystickOffset.Buttons4:
+                    _buttonStates[PS4Buttons.L1] = state.Value > 0;
+                    break;
+                case JoystickOffset.Buttons7:
+                    _buttonStates[PS4Buttons.R2] = state.Value > 0;
+                    break;
+                case JoystickOffset.Buttons6:
+                    _buttonStates[PS4Buttons.L2] = state.Value > 0;
+                    break;
+                case JoystickOffset.Buttons9:
+                    _buttonStates[PS4Buttons.Options] = state.Value > 0;
+                    break;
+                case JoystickOffset.Buttons8:
+                    _buttonStates[PS4Buttons.Share] = state.Value > 0;
+                    break;
+                case JoystickOffset.Buttons12:
+                    _buttonStates[PS4Buttons.PsButton] = state.Value > 0;
+                    break;
+                case JoystickOffset.Buttons11:
+                    _buttonStates[PS4Buttons.RightJoystick] = state.Value > 0;
+                    break;
+                case JoystickOffset.Buttons10:
+                    _buttonStates[PS4Buttons.LeftJoystick] = state.Value > 0;
+                    break;
+                case JoystickOffset.Buttons13:
+                    _buttonStates[PS4Buttons.TouchPad] = state.Value > 0;
+                    break;
+                case JoystickOffset.PointOfViewControllers0:
+                    // TODO: possible problem is if two directions are pressed at once
+                    switch (state.Value)
+                    {
+                        case 9000:
+                            _buttonStates[PS4Buttons.RightArrow] = true;
+                            break;
+                        case 27000:
+                            _buttonStates[PS4Buttons.LeftArrow] = true;
+                            break;
+                        case 0:
+                            _buttonStates[PS4Buttons.UpArrow] = true;
+                            break;
+                        case 18000:
+                            _buttonStates[PS4Buttons.DownArrow] = true;
+                            break;
+                        default:
+                            _buttonStates[PS4Buttons.RightArrow] = false;
+                            _buttonStates[PS4Buttons.LeftArrow] = false;
+                            _buttonStates[PS4Buttons.UpArrow] = false;
+                            _buttonStates[PS4Buttons.DownArrow] = false;
+                            break;
+                    }
+                    break;
+            }
+        }
+    }
+
+    public string ToAxisString()
+        => $"Axis[ MoveX: {MoveX:N2}, MoveY: {MoveY:N2}, RotationX: {RotationX:N2}, RotationY: {RotationY:N2}, LeftPaddle: {LeftPaddle:N2}, RightPaddle: {RightPaddle:N2} ]\n";
+
+    public string ToButtonString()
+        => _buttonStates.Aggregate(string.Empty, (current, state) => current + $"Button: {state.Key}, IsPressed: {state.Value}\n");
+    
+    public override string ToString() => ToAxisString() + ToButtonString();
+}
+
+public class PS4JoystickException(string message) : Exception(message);

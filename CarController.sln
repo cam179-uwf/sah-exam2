@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "App", "App\App.csproj", "{6DDFFEAD-2D5F-405F-8F7C-14C2D8125F6B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PS4Joystick", "PS4Joystick\PS4Joystick.csproj", "{DD1D2D14-BEE8-4E60-8ADE-DE38100638D9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CarService", "CarService\CarService.csproj", "{7AC101E3-44D2-4070-8A86-EBD8EF49906F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_solution-items", "_solution-items", "{C1EBF152-160E-4F4A-929E-6B36E249744C}"
+	ProjectSection(SolutionItems) = preProject
+		.gitignore = .gitignore
+		global.json = global.json
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6DDFFEAD-2D5F-405F-8F7C-14C2D8125F6B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6DDFFEAD-2D5F-405F-8F7C-14C2D8125F6B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6DDFFEAD-2D5F-405F-8F7C-14C2D8125F6B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6DDFFEAD-2D5F-405F-8F7C-14C2D8125F6B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DD1D2D14-BEE8-4E60-8ADE-DE38100638D9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DD1D2D14-BEE8-4E60-8ADE-DE38100638D9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DD1D2D14-BEE8-4E60-8ADE-DE38100638D9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DD1D2D14-BEE8-4E60-8ADE-DE38100638D9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7AC101E3-44D2-4070-8A86-EBD8EF49906F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7AC101E3-44D2-4070-8A86-EBD8EF49906F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7AC101E3-44D2-4070-8A86-EBD8EF49906F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7AC101E3-44D2-4070-8A86-EBD8EF49906F}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

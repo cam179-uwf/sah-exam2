@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        
+        <AssemblyName>CarController.Services</AssemblyName>
+        <RootNamespace>${AssemblyName}</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="InTheHand.Net.Bluetooth" Version="4.2.2" />
+    </ItemGroup>
+
+</Project>
