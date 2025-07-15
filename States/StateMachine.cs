@@ -1,13 +1,20 @@
 namespace CarController.States;
 
-public class StateMachine : IDisposable, IMutableState
+/// <summary>
+/// A state machine that drives verious states.
+/// </summary>
+public class StateMachine : IMutableState
 {
-    private CancellationTokenSource? _cancellationTokenSource;
-    private bool _isStarted;
     public Task? UpdaterTask { get; private set; }
-
     public State State { get; private set; } = null!;
     
+    private CancellationTokenSource? _cancellationTokenSource;
+    private bool _isStarted;
+    
+    /// <summary>
+    /// Start running the state machine with an initial state.
+    /// </summary>
+    /// <param name="root"></param>
     public async Task Start(State root)
     {
         if (_isStarted) return;
@@ -21,6 +28,9 @@ public class StateMachine : IDisposable, IMutableState
         UpdaterTask = Task.Run(Updater);
     }
 
+    /// <summary>
+    /// Stop running the state machine.
+    /// </summary>
     public async Task Stop()
     {
         if (!_isStarted) return;
@@ -38,7 +48,10 @@ public class StateMachine : IDisposable, IMutableState
             await UpdaterTask;
         }
     }
-
+    
+    /// <summary>
+    /// Updates the state machine periodically.
+    /// </summary>
     private async Task Updater()
     {
         while (_cancellationTokenSource?.IsCancellationRequested is false)
@@ -47,12 +60,7 @@ public class StateMachine : IDisposable, IMutableState
             await Task.Delay(10); // 0.01 seconds
         }
     }
-
-    public void Dispose()
-    {
-        State.OnExit();
-    }
-
+    
     public void ChangeState(State state)
     {
         State = state;

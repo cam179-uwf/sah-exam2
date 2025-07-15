@@ -1,5 +1,8 @@
 namespace CarController.Services.PS4;
 
+/// <summary>
+/// Describes a found gamepad device.
+/// </summary>
 internal class GamepadDevice
 {
     public required Guid Guid { get; set; }

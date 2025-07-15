@@ -4,14 +4,14 @@ using CarController.States;
 
 namespace CarController.Runnables.States;
 
-public class AutonomousDriveState : State
+public class AutoDrivingState : State
 {
     private readonly PS4Joystick _joystick;
     private readonly CarService _carService;
     private bool _isLeftIrSensorDetected;
     private bool _isRightIrSensorDetected;
     
-    public AutonomousDriveState(IMutableState mutableState, PS4Joystick joystick, CarService carService) : base(mutableState)
+    public AutoDrivingState(IMutableState mutableState, PS4Joystick joystick, CarService carService) : base(mutableState)
     {
         _joystick = joystick;
         _carService = carService;

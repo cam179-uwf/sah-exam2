@@ -4,41 +4,42 @@ public class CarService
 {
     private const int TickDelayMilliseconds = 100;
     
-    private readonly IBluetoothClient _client;
-
-    private Direction _direction = Direction.Stopped;
-    
     public bool IsConnected => _client.Connected;
     public bool IsStoppedMoving => _direction is Direction.Stopped;
-
     public event Action? OnLeftIrSensorDetected;
     public event Action? OnRightIrSensorDetected;
-    private bool _foundAck;
-    private SemaphoreSlim _semaphoreSlim = new(1, 1);
     
-    public CarService(IBluetoothClient client)
-    {
-        _client = client;
-    }
+    private readonly IBluetoothClient _client;
+    private readonly SemaphoreSlim _semaphore = new(1, 1);
+    private Direction _direction = Direction.Stopped;
+    private bool _foundAck;
+    
+    public CarService(IBluetoothClient client) => _client = client;
 
+    /// <summary>
+    /// Attempts to connect to the desired device.
+    /// </summary>
     public async Task Connect()
     {
         if (_client.Connected) return;
         
         await _client.Connect();
         
-        Console.WriteLine("Waiting for connected message from device.");
+        // receive the Connect message that the ESP32 sends.
         SpinWait.SpinUntil(() => _client.DataAvailable, TimeSpan.FromSeconds(1));
-        
         var buffer = new byte[256];
         var count = _client.Read(ref buffer, 0, buffer.Length);
-        var line = Convert.ToBase64String(buffer[..count]);
-        
-        Console.WriteLine(line);
+        var connectMsg = Convert.ToBase64String(buffer[..count]);
+        Console.WriteLine($"ESP32 says: {connectMsg}");
 
-        _ = Task.Run(Tick);
+        // this listener loop should be run on a different thread
+        // so we call Task.Run
+        _ = Task.Run(ListenerLoop);
     }
 
+    /// <summary>
+    /// Disconnects from the device.
+    /// </summary>
     public void Disconnect()
     {
         if (!_client.Connected) return;
@@ -46,6 +47,9 @@ public class CarService
         _client.Disconnect();
     }
     
+    /// <summary>
+    /// Changes the speed of the car to the specified value.<br/>
+    /// </summary>
     public async Task ChangeSpeed(byte newSpeed)
     {
         await ObtainLock(async () =>
@@ -55,6 +59,9 @@ public class CarService
         });
     }
 
+    /// <summary>
+    /// Commands the car to start turning to the left.
+    /// </summary>
     public async Task TurnLeft()
     {
         await ObtainLock(async () =>
@@ -68,6 +75,9 @@ public class CarService
         });
     }
     
+    /// <summary>
+    /// Commands the car to start turning to the right.
+    /// </summary>
     public async Task TurnRight()
     {
         await ObtainLock(async () =>
@@ -81,6 +91,9 @@ public class CarService
         });
     }
     
+    /// <summary>
+    /// Commands the car to start moving backwards.
+    /// </summary>
     public async Task MoveBackwards()
     {
         await ObtainLock(async () =>
@@ -94,6 +107,9 @@ public class CarService
         });
     }
     
+    /// <summary>
+    /// Commands the car to start moving forwards.
+    /// </summary>
     public async Task MoveForwards()
     {
         await ObtainLock(async () =>
@@ -107,6 +123,9 @@ public class CarService
         });
     }
 
+    /// <summary>
+    /// Commands the car to stop moving.
+    /// </summary>
     public async Task StopMoving()
     {
         await ObtainLock(async () =>
@@ -120,7 +139,11 @@ public class CarService
         });
     }
     
-    private async Task Tick()
+    /// <summary>
+    /// This method has an internal loop that runs until the client disconnects.
+    /// The loop constantly listens for incoming data from the ESP32.
+    /// </summary>
+    private async Task ListenerLoop()
     {
         while (_client.Connected)
         {
@@ -134,6 +157,10 @@ public class CarService
         }
     }
 
+    /// <summary>
+    /// This method causes the calling thread to wait until an acknowledgement bit is sent from the ESP32.
+    /// </summary>
+    /// <exception cref="CarServiceException"></exception>
     private void SpinWaitForAck()
     {
         SpinWait.SpinUntil(() => _client.DataAvailable, TimeSpan.FromSeconds(10));
@@ -153,11 +180,15 @@ public class CarService
         }
     }
     
+    /// <summary>
+    /// Obtains a semaphore lock for the code you want to run.
+    /// </summary>
+    /// <exception cref="CarServiceException"></exception>
     private async Task ObtainLock(Func<Task> func)
     {
         try
         {
-            if (await _semaphoreSlim.WaitAsync(TimeSpan.FromSeconds(10)))
+            if (await _semaphore.WaitAsync(TimeSpan.FromSeconds(10)))
             {
                 await func();
             }
@@ -168,10 +199,13 @@ public class CarService
         }
         finally
         {
-            _semaphoreSlim.Release();
+            _semaphore.Release();
         }
     }
     
+    /// <summary>
+    /// Checks to see if there is anything ready to be read in and processed from the ESP32.
+    /// </summary>
     private void ProcessIncomingStream()
     {
         var buffer = new byte[256];
@@ -197,7 +231,7 @@ public class CarService
             }
         }
     }
-
+    
     private enum Direction
     {
         Stopped,

@@ -2,12 +2,11 @@ using SharpDX.DirectInput;
 
 namespace CarController.Services.PS4;
 
+/// <summary>
+/// All the buttons located on a PS4 remote controller.
+/// </summary>
 public enum PS4Buttons
 {
-    // RightArrow = (PointOfViewControllers0, Value: 9000)
-    // LeftArrow = (PointOfViewControllers0, Value: 27000)
-    // UpArrow = (PointOfViewControllers0, Value: 0)
-    // DownArrow = (PointOfViewControllers0, Value: 18000)
     LeftArrow = 0,
     RightArrow = 1,
     UpArrow = 2,

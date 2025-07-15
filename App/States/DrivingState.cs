@@ -4,13 +4,13 @@ using CarController.States;
 
 namespace CarController.Runnables.States;
 
-public class DriveState : State
+public class DrivingState : State
 {
     private readonly PS4Joystick _joystick;
     private readonly CarService _carService;
     private byte _previousSpeed;
 
-    public DriveState(IMutableState mutableState, PS4Joystick joystick, CarService carService) : base(mutableState)
+    public DrivingState(IMutableState mutableState, PS4Joystick joystick, CarService carService) : base(mutableState)
     {
         _joystick = joystick;
         _carService = carService;
@@ -28,7 +28,7 @@ public class DriveState : State
         
         if (_joystick.OnButtonDown(PS4Buttons.X))
         {
-            await ChangeState(new AutonomousDriveState(MutableState, _joystick, _carService));
+            await ChangeState(new AutoDrivingState(MutableState, _joystick, _carService));
             return;
         }
 

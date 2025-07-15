@@ -7,6 +7,7 @@ CarService carService;
 
 Console.WriteLine("Connecting...");
 
+// try connecting to the car
 try
 {
     carService = new CarService(new InTheHandBluetoothClient("BoxCarESP32"));
@@ -21,6 +22,7 @@ catch (Exception e)
 
 PS4Joystick joystick;
 
+// try connecting to a joystick
 try
 {
     joystick = new PS4Joystick();
@@ -32,9 +34,11 @@ catch (Exception e)
     return;
 }
 
+// run the state machine
 var stateMachine = new StateMachine();
 await stateMachine.Start(new IdleState(stateMachine, joystick, carService));
 
+// wait for the state machine to stop
 if (stateMachine.UpdaterTask is not null)
 {
     await stateMachine.UpdaterTask;

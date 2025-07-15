@@ -1,7 +1,8 @@
-using InTheHand.Net.Sockets;
-
 namespace CarController.Services;
 
+/// <summary>
+/// An interface to define a bluetooth client.
+/// </summary>
 public interface IBluetoothClient
 {
     bool Connected { get; }
