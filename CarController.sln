@@ -12,6 +12,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "_solution-items", "_solutio
 		global.json = global.json
 	EndProjectSection
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "States", "States\States.csproj", "{0BBC5553-151D-41F3-B35C-BE9D631D5D2D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,5 +32,9 @@ Global
 		{7AC101E3-44D2-4070-8A86-EBD8EF49906F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7AC101E3-44D2-4070-8A86-EBD8EF49906F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7AC101E3-44D2-4070-8A86-EBD8EF49906F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0BBC5553-151D-41F3-B35C-BE9D631D5D2D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0BBC5553-151D-41F3-B35C-BE9D631D5D2D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0BBC5553-151D-41F3-B35C-BE9D631D5D2D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0BBC5553-151D-41F3-B35C-BE9D631D5D2D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

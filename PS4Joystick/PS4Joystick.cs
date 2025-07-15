@@ -7,8 +7,6 @@ namespace CarController.Services.PS4;
 public class PS4Joystick
 {
     private readonly Joystick _joystick;
-    private readonly Timer _ticker;
-
     private GamepadDevice GamepadDevice { get; set; }
     public float LeftJoystickDeadZone { get; private set; } = 0.15F;
     public float RightJoystickDeadZone { get; private set; } = 0.15F;
@@ -20,12 +18,14 @@ public class PS4Joystick
     public float RightPaddle { get; private set; }
 
     private readonly Dictionary<PS4Buttons, bool> _buttonStates = [];
+    private readonly Dictionary<PS4Buttons, bool> _previousButtonStates = [];
 
     public PS4Joystick()
     {
         foreach (var value in Enum.GetValues(typeof(PS4Buttons)))
         {
             _buttonStates.Add((PS4Buttons)value, false);
+            _previousButtonStates.Add((PS4Buttons)value, false);
         }
         
         GamepadDevice = FindAvailableJoysticks().FirstOrDefault() 
@@ -36,17 +36,6 @@ public class PS4Joystick
 
         _joystick.Properties.BufferSize = 128;
         _joystick.Acquire();
-
-        _ticker = new Timer();
-        _ticker.Interval = 100;
-        _ticker.Elapsed += Tick;
-        _ticker.AutoReset = true;
-        _ticker.Start();
-    }
-
-    ~PS4Joystick()
-    {
-        _ticker.Dispose();
     }
     
     private static IEnumerable<GamepadDevice> FindAvailableJoysticks()
@@ -57,24 +46,35 @@ public class PS4Joystick
             .AsEnumerable();
     }
 
-    /// <summary>
-    /// Change the tick speed of the joystick polling.
-    /// </summary>
-    /// <param name="milliseconds">Tick speed in milliseconds.</param>
-    public void SetTick(int milliseconds)
-    {
-        _ticker.Stop();
-        _ticker.Interval = milliseconds;
-        _ticker.Start();
-    }
-
     public bool IsButtonPressed(PS4Buttons ps4Button) => _buttonStates[ps4Button];
+    public bool OnButtonDown(PS4Buttons ps4Button) => !_previousButtonStates[ps4Button] && _buttonStates[ps4Button];
+    public bool OnButtonUp(PS4Buttons ps4Button) => _previousButtonStates[ps4Button] && !_buttonStates[ps4Button];
+    
 
-    private void Tick(object? sender, ElapsedEventArgs e)
+    public void Update()
     {
         _joystick.Poll();
         var bufferedData = _joystick.GetBufferedData();
         
+        _previousButtonStates[PS4Buttons.Square] = _buttonStates[PS4Buttons.Square];
+        _previousButtonStates[PS4Buttons.Triangle] = _buttonStates[PS4Buttons.Triangle];
+        _previousButtonStates[PS4Buttons.Circle] = _buttonStates[PS4Buttons.Circle];
+        _previousButtonStates[PS4Buttons.X] = _buttonStates[PS4Buttons.X];
+        _previousButtonStates[PS4Buttons.R1] = _buttonStates[PS4Buttons.R1];
+        _previousButtonStates[PS4Buttons.L1] = _buttonStates[PS4Buttons.L1];
+        _previousButtonStates[PS4Buttons.R2] = _buttonStates[PS4Buttons.R2];
+        _previousButtonStates[PS4Buttons.L2] = _buttonStates[PS4Buttons.L2];
+        _previousButtonStates[PS4Buttons.Options] = _buttonStates[PS4Buttons.Options];
+        _previousButtonStates[PS4Buttons.Share] = _buttonStates[PS4Buttons.Share];
+        _previousButtonStates[PS4Buttons.PsButton] = _buttonStates[PS4Buttons.PsButton];
+        _previousButtonStates[PS4Buttons.RightJoystick] = _buttonStates[PS4Buttons.RightJoystick];
+        _previousButtonStates[PS4Buttons.LeftJoystick] = _buttonStates[PS4Buttons.LeftJoystick];
+        _previousButtonStates[PS4Buttons.TouchPad] = _buttonStates[PS4Buttons.TouchPad];
+        _previousButtonStates[PS4Buttons.RightArrow] = _buttonStates[PS4Buttons.RightArrow];
+        _previousButtonStates[PS4Buttons.LeftArrow] = _buttonStates[PS4Buttons.LeftArrow];
+        _previousButtonStates[PS4Buttons.UpArrow] = _buttonStates[PS4Buttons.UpArrow];
+        _previousButtonStates[PS4Buttons.DownArrow] = _buttonStates[PS4Buttons.DownArrow];
+
         foreach (var state in bufferedData)
         {
             switch (state.Offset)

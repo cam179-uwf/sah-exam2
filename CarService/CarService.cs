@@ -17,7 +17,7 @@ public class CarService : IDisposable
     public event Action? OnLeftIrSensorDetected;
     public event Action? OnRightIrSensorDetected;
     private bool _foundAck;
-    private object _processIncomingStreamLock = new();
+    private readonly object _processIncomingStreamLock = new();
     
     public CarService(string deviceName)
     {
@@ -126,7 +126,6 @@ public class CarService : IDisposable
     {
         if (_direction is Direction.Right) return;
         
-        Console.WriteLine("Turn right.");
         _stream?.Write([4]);
         await Task.Run(SpinWaitForAck);
         
@@ -137,7 +136,6 @@ public class CarService : IDisposable
     {
         if (_direction is Direction.Backward) return;
         
-        Console.WriteLine("Move backwards.");
         _stream?.Write([2]);
         await Task.Run(SpinWaitForAck);
         
@@ -148,7 +146,6 @@ public class CarService : IDisposable
     {
         if (_direction is Direction.Forward) return;
         
-        Console.WriteLine("Move forwards.");
         _stream?.Write([1]);
         await Task.Run(SpinWaitForAck);
         
@@ -159,7 +156,6 @@ public class CarService : IDisposable
     {
         if (_direction is Direction.Stopped) return;
         
-        Console.WriteLine("Stop moving.");
         _stream?.Write([0]);
         await Task.Run(SpinWaitForAck);
         
@@ -180,18 +176,7 @@ public class CarService : IDisposable
 
         lock (_processIncomingStreamLock)
         {
-            SpinWait.SpinUntil(() =>
-            {
-                try
-                {
-                    return _stream.DataAvailable;
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e);
-                    return false;
-                }
-            }, TimeSpan.FromSeconds(10));
+            SpinWait.SpinUntil(() => _stream.DataAvailable, TimeSpan.FromSeconds(10));
 
             if (_stream.DataAvailable)
             {

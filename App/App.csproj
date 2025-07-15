@@ -18,6 +18,7 @@
     <ItemGroup>
       <ProjectReference Include="..\CarService\CarService.csproj" />
       <ProjectReference Include="..\PS4Joystick\PS4Joystick.csproj" />
+      <ProjectReference Include="..\States\States.csproj" />
     </ItemGroup>
 
 </Project>
