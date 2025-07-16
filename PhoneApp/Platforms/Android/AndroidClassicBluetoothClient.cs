@@ -22,6 +22,13 @@ public class AndroidClassicBluetoothClient : IBluetoothClient
         _deviceName = deviceName;
     } 
     
+    /// <summary>
+    /// Don't really understand this code perfectly.
+    /// But I know it is getting a bluetooth device from
+    /// our connected bluetooth devices and is setting up
+    /// an input stream and output stream between us and
+    /// the device.
+    /// </summary>
     public async Task Connect()
     {
         var bluetoothManager = Android.App.Application.Context.GetSystemService(Context.BluetoothService) as BluetoothManager;
@@ -46,6 +53,9 @@ public class AndroidClassicBluetoothClient : IBluetoothClient
         _outputStream = _socket?.OutputStream;
     }
 
+    /// <summary>
+    /// Closes the socket connection.
+    /// </summary>
     public void Disconnect()
     {
         _socket?.Close();

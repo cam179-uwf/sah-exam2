@@ -13,7 +13,10 @@ public class AutoDrivingState : State
     {
         _carService = carService;
     }
-
+    
+    /// <summary>
+    /// Handle when auto mode button is clicked event.
+    /// </summary>
     private async void OnGlobalAutoModeButtonClicked(bool isAutoMode)
     {
         try
@@ -29,12 +32,18 @@ public class AutoDrivingState : State
         }
     }
     
+    /// <summary>
+    /// Handle when left IR sensor is triggered event.
+    /// </summary>
     private void OnLeftIrSensorDetected()
     {
         Console.WriteLine("Left IR sensor detected.");
         _isLeftIrSensorDetected = true;
     }
 
+    /// <summary>
+    /// Handle when right IR sensor is triggered event.
+    /// </summary>
     private void OnRightIrSensorDetected()
     {
         Console.WriteLine("Right IR sensor detected.");
@@ -49,32 +58,43 @@ public class AutoDrivingState : State
         _carService.OnRightIrSensorDetected += OnRightIrSensorDetected;
         MainPage.GlobalAutoModeButtonClicked += OnGlobalAutoModeButtonClicked;
         
+        // set the cars speed to max
         await _carService.ChangeSpeed(255);
+        
+        // move the car forward
         await _carService.MoveForwards();
     }
 
     public override async Task OnUpdate()
     {
+        // if the left IR sensor was detected do this
         if (_isLeftIrSensorDetected)
         {
+            // turn the car right for 2 seconds
             await _carService.TurnRight();
 
             await Task.Delay(2000);
             
+            // start moving forward again
             await _carService.MoveForwards();
             
+            // clear any sensor detected events
             _isLeftIrSensorDetected = false;
             _isRightIrSensorDetected = false;
         }
         
+        // if the right IR sensor was detected do this
         if (_isRightIrSensorDetected)
         {
+            // turn the car left for 2 seconds
             await _carService.TurnLeft();
 
             await Task.Delay(2000);
             
+            // start moving forward again
             await _carService.MoveForwards();
             
+            // clear any sensor detected events
             _isLeftIrSensorDetected = false;
             _isRightIrSensorDetected = false;
         }

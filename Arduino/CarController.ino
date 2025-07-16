@@ -20,14 +20,22 @@ enum class Direction
   Right
 };
 
+// some constants
 const int SWITCH_DIRECTION_WAIT_TIME = 100; // in milliseconds
 const int ACK = 1;
 const int LEFT_SENSOR_SCREAM = 2;
 const int RIGHT_SENSOR_SCREAM = 3;
 
+// using the classic version of bluetooth:
+// realized late in the process that I should 
+// have used BLE to make my life so much simpler
 BluetoothSerial SerialBT;
+
+// what this device will call itself when broadcasting
 String deviceName = "BoxCarESP32";
 
+// all the pins for the motor controllers
+// front motor controller pins
 int ena_front = 13;
 int in1_front = 12;
 int in2_front = 14;
@@ -35,6 +43,7 @@ int enb_front = 25;
 int in3_front = 27;
 int in4_front = 26;
 
+// back motor controller pins
 int ena_back = 15;
 int in1_back = 2;
 int in2_back = 4;
@@ -42,22 +51,29 @@ int enb_back = 5;
 int in3_back = 18;
 int in4_back = 19;
 
+// the pin for the LED that indicates if a 
+// connection has been established via bluetooth
 int connectionLed = 33; 
 int rightIrSensor = 21;
 int leftIrSensor = 32;
 
+// booleans to remember which IR sensor was triggered
 bool isRightSensorDetected = false;
 bool isLeftSensorDetected = false;
 
+// keeps track of our current speed
 byte currentSpeed = 0;
 
+// keeps track of what direction we are moving in
 Direction currentDirection = Direction::Stopped;
 
+// interrupt for the left IR sensor
 void IRAM_ATTR OnLeftSensorDetected()
 {
   isLeftSensorDetected = true;
 }
 
+// interrupt for the right IR sensor
 void IRAM_ATTR OnRightSensorDetected()
 {
   isRightSensorDetected = true;
@@ -65,12 +81,16 @@ void IRAM_ATTR OnRightSensorDetected()
 
 void setup() 
 {
+  // Setup serial comm and bluetooth
   Serial.begin(115200);
   SerialBT.begin(deviceName);
   SerialBT.deleteAllBondedDevices();
-
+  
+  // register a bluetooth call back that will be raised when
+  // a client is connected or disconnected
   SerialBT.register_callback(BluetoothEventsCallback);
 
+  // all the pins setup for the motor controllers
   pinMode(ena_front, OUTPUT);
   pinMode(in1_front, OUTPUT);
   pinMode(in2_front, OUTPUT);
@@ -87,22 +107,28 @@ void setup()
   pinMode(in3_back, OUTPUT);
   pinMode(in4_back, OUTPUT);
 
-  pinMode(connectionLed, OUTPUT);  
+  // LED pin setup
+  pinMode(connectionLed, OUTPUT);
+  
+  // IR sensor pins setup
   pinMode(leftIrSensor, INPUT);
   pinMode(rightIrSensor, INPUT);
 
+  // hardware interrupts for the left and right IR sensor pins
+  // didn't get to debounce the signal so these interrupts actually fire twice
   attachInterrupt(digitalPinToInterrupt(leftIrSensor), OnLeftSensorDetected, FALLING);
   attachInterrupt(digitalPinToInterrupt(rightIrSensor), OnRightSensorDetected, FALLING);
 }
 
 void loop() 
 {
+  // if no client is connected do nothing
   if (!SerialBT.connected())
   {
-    // TODO: turn off connected LED
     return;
   }
-
+  
+  // otherwise do something if the client is sending data
   if (SerialBT.available()) 
   {
     byte cmd = SerialBT.read();
@@ -146,6 +172,7 @@ void loop()
     }
   }
   
+  // if the left IR sensor is detected
   if (isLeftSensorDetected)
   {
     isLeftSensorDetected = false;
@@ -153,6 +180,7 @@ void loop()
     Serial.println("Left sensor detected.");
   }
 
+  // if the right IR sensor is detected
   if (isRightSensorDetected)
   {
     isRightSensorDetected = false;
@@ -163,8 +191,8 @@ void loop()
   delay(20);
 }
 
-// Callback function for Bluetooth events
-void BluetoothEventsCallback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param) 
+// bluetooth callback
+void BluetoothEventsCallback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
 {
   switch (event)
   {
@@ -184,11 +212,12 @@ void BluetoothEventsCallback(esp_spp_cb_event_t event, esp_spp_cb_param_t *param
   }
 }
 
+// move the car forward with the currentSpeed
 void SetForward()
 {
   if (currentDirection == Direction::Forward) return;
 
-  StopMoving();
+  StopMoving(); // stop moving for a little bit so as to not break the motors
   currentDirection = Direction::Forward;
 
   delay(SWITCH_DIRECTION_WAIT_TIME);
@@ -207,11 +236,12 @@ void SetForward()
   digitalWrite(in4_back, HIGH);
 }
 
+// move the car backward with the currentSpeed
 void SetBackward()
 {
   if (currentDirection == Direction::Backward) return;
 
-  StopMoving();
+  StopMoving(); // stop moving for a little bit so as to not break the motors
   currentDirection = Direction::Backward;
 
   delay(SWITCH_DIRECTION_WAIT_TIME);
@@ -230,11 +260,12 @@ void SetBackward()
   digitalWrite(in4_back, LOW);
 }
 
+// turn the car left with the currentSpeed
 void SetLeft()
 {
   if (currentDirection == Direction::Left) return;
 
-  StopMoving();
+  StopMoving(); // stop moving for a little bit so as to not break the motors
   currentDirection = Direction::Left;
 
   delay(SWITCH_DIRECTION_WAIT_TIME);
@@ -253,11 +284,12 @@ void SetLeft()
   digitalWrite(in4_back, HIGH);
 }
 
+// turn the car right with the currentSpeed
 void SetRight()
 {
   if (currentDirection == Direction::Right) return;
 
-  StopMoving();
+  StopMoving(); // stop moving for a little bit so as to not break the motors
   currentDirection = Direction::Right;
 
   delay(SWITCH_DIRECTION_WAIT_TIME);
@@ -276,6 +308,7 @@ void SetRight()
   digitalWrite(in4_back, LOW);
 }
 
+// set the speed
 void SetSpeed(const int& speed)
 {
   if (currentDirection == Direction::Stopped) return;
@@ -287,6 +320,7 @@ void SetSpeed(const int& speed)
   analogWrite(enb_back, speed);
 }
 
+// stop the car from moving
 void StopMoving()
 {
   currentDirection = Direction::Stopped;

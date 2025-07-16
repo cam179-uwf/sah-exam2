@@ -25,16 +25,19 @@ public class IdleState : State
     {
         _joystick.Update();
         
+        // if the x button is pressed down then switch to the auto driving state
         if (_joystick.OnButtonDown(PS4Buttons.X))
         {
             await ChangeState(new AutoDrivingState(MutableState, _joystick, _carService));
             return;
         }
         
+        // if the R2 button is pressed then switch to the driving state
         if (_joystick.IsButtonPressed(PS4Buttons.R2))
         {
             await ChangeState(new DrivingState(MutableState, _joystick, _carService));
         }
+        // if the car hasn't stopped then stop the car
         else if (!_carService.IsStoppedMoving)
         {
             await _carService.StopMoving();

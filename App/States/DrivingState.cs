@@ -45,6 +45,7 @@ public class DrivingState : State
             await _carService.ChangeSpeed(speed);
         }
     
+        // change our direction depending on our input
         if (_joystick.IsButtonPressed(PS4Buttons.LeftArrow))
         {
             await _carService.TurnLeft();    
@@ -61,6 +62,8 @@ public class DrivingState : State
         {
             await _carService.MoveBackwards();
         }
+        // if we aren't pressing one of the directional arrows on
+        // the controller than just stop the car
         else if (!_carService.IsStoppedMoving)
         {
             await _carService.StopMoving();

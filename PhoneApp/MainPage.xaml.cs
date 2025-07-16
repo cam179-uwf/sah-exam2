@@ -11,6 +11,7 @@ public partial class MainPage
     private bool _isConnecting;
     private bool _isAutoMode;
 
+    // events for UI events
     public static event Action? GlobalStopButtonClicked;
     public static event Action<bool>? GlobalAutoModeButtonClicked; 
     public static event Action? GlobalLeftButtonClicked; 
@@ -39,6 +40,9 @@ public partial class MainPage
         StopButton.Clicked += (_, _) => GlobalStopButtonClicked?.Invoke();
     }
 
+    /// <summary>
+    /// Whenever the speed slider is changed raise an event.
+    /// </summary>
     private void SpeedSliderChanged(object? sender, ValueChangedEventArgs e)
     {
         if (_carService.IsConnected)
@@ -47,6 +51,9 @@ public partial class MainPage
         }
     }
 
+    /// <summary>
+    /// Whenever the connect button is clicked try to connect.
+    /// </summary>
     private void ConnectClicked(object? sender, EventArgs e)
     {
         if (!_isConnecting)
@@ -55,6 +62,9 @@ public partial class MainPage
         }
     }
 
+    /// <summary>
+    /// Switch between being in auto mode and not being in auto mode.
+    /// </summary>
     private void AutoModeButtonClicked(object? sender, EventArgs e)
     {
         if (!_carService.IsConnected) return;
@@ -77,8 +87,11 @@ public partial class MainPage
         {
             _isConnecting = true;
 
+            // we need to request permission to use bluetooth on Android
             await RequestBluetoothPermissionsAsync();
 
+            // if we are already connected then just disconnect
+            // and stop our state machine
             if (_carService.IsConnected)
             {
                 await _stateMachine.Stop();
@@ -99,6 +112,7 @@ public partial class MainPage
                 ConnectButton.Background = new SolidColorBrush(Colors.LightYellow);
             });
             
+            // connect to the car and start our state machine
             await _carService.Connect();
             await _stateMachine.Start(new IdleState(_stateMachine, _carService));
 
@@ -124,6 +138,9 @@ public partial class MainPage
         }
     }
     
+    /// <summary>
+    /// Just requests bluetooth permissions on Android.
+    /// </summary>
     private async Task RequestBluetoothPermissionsAsync()
     {
 #if ANDROID

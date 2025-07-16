@@ -12,6 +12,14 @@ public class DrivingState : State
         _carService = carService;
     }
     
+    // I really don't want to write out a comment for each
+    // of the following methods because they all speak for
+    // themselves, and I am just going to repeat what the method
+    // names already say
+    // so scroll down to the logic
+    //
+    // basically, these methods handle our UI button events
+    
     private async void OnGlobalAutoModeButtonClicked(bool isAutoMode)
     {
         try
